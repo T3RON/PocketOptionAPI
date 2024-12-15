@@ -1,5 +1,6 @@
 """
-Autor: AdminhuDev
+Módulo para sincronização de tempo com o servidor da PocketOption.
+Fornece funcionalidades para manter o tempo local sincronizado com o servidor.
 """
 from datetime import datetime, timezone
 
