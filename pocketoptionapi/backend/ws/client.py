@@ -1,4 +1,6 @@
-# Client.py made by © Vigo Walker
+"""
+Cliente WebSocket para comunicação com o backend da PocketOption.
+"""
 
 import websockets
 import anyio
