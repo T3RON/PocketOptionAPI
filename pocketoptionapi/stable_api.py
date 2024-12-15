@@ -1,7 +1,13 @@
 """
+PocketOptionAPI - Interface Python não oficial para a plataforma PocketOption
+
+Esta é a implementação principal da API da PocketOption, fornecendo métodos
+para autenticação, trading e obtenção de dados do mercado.
+
 Autor: AdminhuDev
+Versão: 1.0.0
 """
-# Este é um script Python de exemplo.
+
 import asyncio
 import threading
 import sys
@@ -21,29 +27,63 @@ import pandas as pd
 local_zone_name = get_localzone()
 
 def nested_dict(n, type):
+    """
+    Cria um dicionário aninhado com profundidade n.
+    
+    Args:
+        n (int): Número de níveis de aninhamento
+        type: Tipo do valor final no dicionário
+    
+    Returns:
+        defaultdict: Dicionário aninhado inicializado
+    """
     if n == 1:
         return defaultdict(type)
     else:
         return defaultdict(lambda: nested_dict(n - 1, type))
 
 def get_balance():
+    """Retorna o saldo atual da conta."""
     return global_value.balance
 
 class PocketOption:
+    """
+    Classe principal para interação com a PocketOption.
+    
+    Fornece métodos para:
+    - Conexão e autenticação
+    - Trading (compra/venda)
+    - Obtenção de dados do mercado
+    - Gerenciamento de conta
+    
+    Attributes:
+        __version__ (str): Versão atual da API
+        ssid (str): ID de sessão para autenticação
+        demo (bool): Se True, usa conta demo. Se False, usa conta real
+    """
+    
     __version__ = "1.0.0"
 
     def __init__(self, ssid, demo):
+        """
+        Inicializa uma nova instância da API PocketOption.
+        
+        Args:
+            ssid (str): ID de sessão para autenticação
+            demo (bool): Se True, usa conta demo. Se False, usa conta real
+        """
+        # Timeframes disponíveis em segundos
         self.size = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800,
                      3600, 7200, 14400, 28800, 43200, 86400, 604800, 2592000]
         global_value.SSID = ssid
         global_value.DEMO = demo
-        print(demo)
+        print(f"Modo Demo: {demo}")
         self.suspend = 0.5
         self.thread = None
         self.subscribe_candle = []
         self.subscribe_candle_all_size = []
         self.subscribe_mood = []
-        # para dígitos
+        # Dados para operações digitais
         self.get_digital_spot_profit_after_sale_data = nested_dict(2, int)
         self.get_realtime_strike_list_temp_data = {}
         self.get_realtime_strike_list_temp_expiration = 0
@@ -55,19 +95,38 @@ class PocketOption:
         self.loop = asyncio.get_event_loop()
 
     def get_server_timestamp(self):
+        """Retorna o timestamp atual do servidor em segundos."""
         return self.api.time_sync.server_timestamp
         
     def Stop(self):
+        """Para a execução do programa."""
         sys.exit()
 
     def get_server_datetime(self):
+        """Retorna o datetime atual do servidor."""
         return self.api.time_sync.server_datetime
 
     def set_session(self, header, cookie):
+        """
+        Define os headers e cookies da sessão.
+        
+        Args:
+            header (dict): Headers HTTP para requisições
+            cookie (dict): Cookies para autenticação
+        """
         self.SESSION_HEADER = header
         self.SESSION_COOKIE = cookie
 
     def get_async_order(self, buy_order_id):
+        """
+        Obtém informações de uma ordem assíncrona.
+        
+        Args:
+            buy_order_id (int): ID da ordem de compra
+            
+        Returns:
+            dict: Informações da ordem ou None se não encontrada
+        """
         if self.api.order_async["deals"][0]["id"] == buy_order_id:
             return self.api.order_async["deals"][0]
         else:
@@ -77,10 +136,19 @@ class PocketOption:
         return self.api.order_async["deals"][0][buy_order_id]
 
     def start_async(self):
+        """Inicia a conexão assíncrona com o WebSocket."""
         asyncio.run(self.api.connect())
         
     def disconnect(self):
-        """Fecha graciosamente a conexão WebSocket e limpa."""
+        """
+        Fecha graciosamente a conexão WebSocket e limpa recursos.
+        
+        Este método:
+        1. Fecha a conexão WebSocket
+        2. Cancela todas as tasks pendentes
+        3. Fecha o loop de eventos
+        4. Encerra a thread do WebSocket
+        """
         try:
             if global_value.websocket_is_connected:
                 asyncio.run(self.api.close())
@@ -106,8 +174,12 @@ class PocketOption:
 
     def connect(self):
         """
-        Método síncrono para estabelecer a conexão.
-        Utiliza internamente o loop de eventos asyncio para executar a corrotina de conexão.
+        Estabelece conexão com a API da PocketOption.
+        
+        Este método inicia uma thread separada para manter a conexão WebSocket.
+        
+        Returns:
+            bool: True se a conexão foi iniciada com sucesso, False caso contrário
         """
         try:
             websocket_thread = threading.Thread(target=self.api.connect, daemon=True)
@@ -119,6 +191,15 @@ class PocketOption:
         return True
     
     def GetPayout(self, pair):
+        """
+        Obtém o payout (retorno percentual) para um par de moedas.
+        
+        Args:
+            pair (str): Par de moedas (ex: "EURUSD")
+            
+        Returns:
+            float: Percentual de payout ou None se não disponível
+        """
         try:
             data = self.api.GetPayoutData()
             data = json.loads(data)
@@ -132,6 +213,12 @@ class PocketOption:
 
     @staticmethod
     def check_connect():
+        """
+        Verifica se a conexão WebSocket está ativa.
+        
+        Returns:
+            bool: True se conectado, False caso contrário
+        """
         if global_value.websocket_is_connected == 0:
             return False
         elif global_value.websocket_is_connected is None:
@@ -141,6 +228,12 @@ class PocketOption:
 
     @staticmethod
     def get_balance():
+        """
+        Obtém o saldo atual da conta.
+        
+        Returns:
+            float: Saldo atual ou None se não disponível
+        """
         if global_value.balance_updated:
             return global_value.balance
         else:
@@ -148,10 +241,25 @@ class PocketOption:
             
     @staticmethod
     def check_open():
+        """
+        Verifica se há ordens abertas.
+        
+        Returns:
+            bool: True se há ordens abertas, False caso contrário
+        """
         return global_value.order_open
         
     @staticmethod
     def check_order_closed(ido):
+        """
+        Aguarda até que uma ordem específica seja fechada.
+        
+        Args:
+            ido (int): ID da ordem
+            
+        Returns:
+            int: ID da ordem fechada
+        """
         while ido not in global_value.order_closed:
             time.sleep(0.1)
 
@@ -162,6 +270,18 @@ class PocketOption:
         return pack[0]
     
     def buy(self, amount, active, action, expirations):
+        """
+        Realiza uma operação de compra.
+        
+        Args:
+            amount (float): Valor monetário da operação
+            active (str): Ativo a ser negociado
+            action (str): Tipo de operação ("call" ou "put")
+            expirations (int): Tempo de expiração em segundos
+            
+        Returns:
+            tuple: (bool, int) - (Sucesso da operação, ID da ordem ou None)
+        """
         self.api.buy_multi_option = {}
         self.api.buy_successful = None
         req_id = "buy"
@@ -195,8 +315,16 @@ class PocketOption:
         return global_value.result, global_value.order_data.get("id", None)
 
     def check_win(self, id_number):
-        """Retorna quantidade de negociações e status de ganho/perda."""
-
+        """
+        Verifica o resultado de uma operação.
+        
+        Args:
+            id_number (int): ID da ordem a ser verificada
+            
+        Returns:
+            tuple: (float, str) - (Lucro/Prejuízo, Status da operação)
+                Status pode ser: "ganhou", "perdeu" ou "desconhecido"
+        """
         start_t = time.time()
         order_info = None
 
@@ -223,22 +351,40 @@ class PocketOption:
 
     @staticmethod
     def last_time(timestamp, period):
+        """
+        Calcula o timestamp do início do período atual.
+        
+        Args:
+            timestamp (int): Timestamp em segundos
+            period (int): Período em segundos
+            
+        Returns:
+            int: Timestamp do início do período
+        """
         timestamp_arredondado = (timestamp // period) * period
         return int(timestamp_arredondado)
 
     def get_candles(self, active, period, start_time=None, count=6000, count_request=1):
         """
-        Realiza múltiplas requisições para obter dados históricos de velas e os processa.
-        Retorna um Dataframe ordenado do menor ao maior pela coluna 'time'.
-
-        :param active: O ativo para o qual obter as velas.
-        :param period: O intervalo de tempo de cada vela em segundos.
-        :param count: O número de segundos a obter em cada requisição, max: 9000 = 150 dados de 1 min.
-        :param start_time: O tempo final para a última vela.
-        :param count_request: O número de requisições para obter mais dados históricos.
+        Obtém dados históricos de velas (candles) para um ativo.
+        
+        Args:
+            active (str): Código do ativo (ex: "EURUSD")
+            period (int): Período de cada vela em segundos
+            start_time (int, optional): Timestamp final para a última vela
+            count (int): Número de velas por requisição (max: 9000)
+            count_request (int): Número de requisições para dados históricos
+            
+        Returns:
+            pandas.DataFrame: DataFrame com os dados das velas, contendo:
+                - time: Timestamp da vela
+                - open: Preço de abertura
+                - high: Preço máximo
+                - low: Preço mínimo
+                - close: Preço de fechamento
+                - volume: Volume negociado
         """
         try:
-            print("Na tentativa")
             if start_time is None:
                 time_sync = self.get_server_timestamp()
                 time_red = self.last_time(time_sync, period)
