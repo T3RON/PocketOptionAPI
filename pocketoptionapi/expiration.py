@@ -1,5 +1,5 @@
 """
-Autor: AdminhuDev
+Utilitários para manipulação de datas e timestamps.
 """
 import time
 from datetime import datetime, timedelta

@@ -1,5 +1,5 @@
 """
-Autor: AdminhuDev
+Cliente WebSocket para comunicação com a PocketOption.
 """
 from pocketoptionapi.backend.ws.client import WebSocketClient
 from pocketoptionapi.backend.ws.chat import WebSocketClientChat

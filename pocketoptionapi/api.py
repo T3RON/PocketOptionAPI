@@ -1,5 +1,5 @@
 """
-Autor: AdminhuDev
+Interface principal para comunicação com a API da PocketOption.
 """
 import asyncio
 import datetime
