@@ -4,7 +4,6 @@ PocketOptionAPI - Interface Python não oficial para a plataforma PocketOption
 Esta é a implementação principal da API da PocketOption, fornecendo métodos
 para autenticação, trading e obtenção de dados do mercado.
 
-Autor: AdminhuDev
 Versão: 1.0.0
 """
 
