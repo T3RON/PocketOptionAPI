@@ -11,7 +11,7 @@
 
 ## ✨ Destaques
 
-- 🔐 **Autenticação Segura**: Login e gerenciamento de sessão robusto
+- 🔐 **Autenticação Segura**: Login via SSID e gerenciamento de sessão robusto
 - 💹 **Trading Automatizado**: Operações de compra e venda programáticas
 - 📊 **Dados em Tempo Real**: WebSocket para cotações e operações
 - 📈 **Análise Técnica**: Acesso a dados históricos e indicadores
@@ -35,15 +35,22 @@ pip install -e .
 ## 📖 Uso Básico
 
 ```python
-from pocketoptionapi import PocketOption
+from pocketoptionapi.stable_api import PocketOption
+import logging
 
-# Inicialização e login
-api = PocketOption(
-    email="seu_email",
-    password="sua_senha",
-    demo=True  # Use False para conta real
-)
-api.connect()
+# Configurar logging (opcional)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
+
+# Configuração da sessão
+ssid = """42["auth",{"session":"sua_sessao_aqui","isDemo":1,"uid":seu_uid_aqui,"platform":2}]"""
+demo = True  # True para conta demo, False para conta real
+
+# Inicializar API
+api = PocketOption(ssid, demo)
+
+# Conectar
+connect = api.connect()
+print(connect)
 
 # Consultar saldo
 saldo = api.get_balance()
@@ -52,7 +59,7 @@ print(f"💰 Saldo: ${saldo:.2f}")
 # Realizar operação
 resultado = api.buy(
     price=10,           # Valor em $
-    asset="EURUSD",     # Par de moedas
+    asset="EURUSD_otc", # Par de moedas (note o sufixo _otc)
     direction="call",   # "call" (Alta) ou "put" (Baixa)
     duration=1          # Expiração em minutos
 )
@@ -80,9 +87,9 @@ def trade_handler(result):
 ```python
 # Obter histórico de candles
 candles = api.get_candles(
-    asset="EURUSD",
-    interval=60,  # Intervalo em segundos
-    count=100     # Quantidade de candles
+    asset="EURUSD_otc",  # Note o sufixo _otc para ativos OTC
+    interval=60,         # Intervalo em segundos
+    count=100           # Quantidade de candles
 )
 
 # Análise dos dados
@@ -101,12 +108,15 @@ python-dateutil>=2.8.2
 pandas>=2.1.3
 ```
 
-### Variáveis de Ambiente (Opcional)
-```bash
-export POCKETOPTION_EMAIL="seu_email"
-export POCKETOPTION_PASSWORD="sua_senha"
-export POCKETOPTION_DEMO=true
-```
+### Obtendo o SSID
+Para obter o SSID necessário para autenticação:
+
+1. Faça login na plataforma PocketOption pelo navegador
+2. Abra as Ferramentas do Desenvolvedor (F12)
+3. Vá para a aba "Network" (Rede)
+4. Procure por conexões WebSocket
+5. Encontre a mensagem de autenticação que contém o SSID
+6. Copie o SSID completo no formato mostrado no exemplo
 
 ## 🤝 Contribuindo
 
