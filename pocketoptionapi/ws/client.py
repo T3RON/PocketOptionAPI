@@ -103,9 +103,11 @@ class WebsocketClient(object):
                     async with websockets.connect(
                             url,
                             ssl=ssl_context,
-                            extra_headers={"Origin": "https://pocketoption.com", "Cache-Control": "no-cache"},
-                            user_agent_header="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
-                                              "like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                            additional_headers={
+                                "Origin": "https://pocketoption.com",
+                                "Cache-Control": "no-cache",
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                            }
                     ) as ws:
                         self.websocket = ws
                         self.url = url
