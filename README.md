@@ -7,7 +7,7 @@
 
 > Uma API Python robusta e moderna para integração com a PocketOption, oferecendo uma interface limpa e eficiente para automação de operações.
 
-![Preview da API](https://cdn.pixabay.com/photo/2019/10/09/07/28/development-4536630_1280.png)
+![Preview da API](pocketoption.png)
 
 ## ✨ Destaques
 
