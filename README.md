@@ -1,108 +1,130 @@
-# PocketOptionAPI
+# PocketOption API
 
-API não oficial para a plataforma PocketOption, desenvolvida em Python.
+Uma API Python robusta e fácil de usar para integração com a PocketOption.
 
-## Características
+## 📦 Instalação
 
-- ✨ Interface Python moderna e fácil de usar
-- 🔄 Conexão WebSocket em tempo real
-- 📊 Dados de mercado em tempo real
-- 💰 Suporte a contas demo e real
-- 📈 Operações de trading automatizadas
-- 🔐 Gerenciamento seguro de sessão
+Você pode instalar a API de duas maneiras:
 
-## Instalação
-
+### Via pip (diretamente do GitHub):
 ```bash
-git clone https://github.com/AdminhuDev/PocketOptionAPI.git
-cd PocketOptionAPI
-pip install -r requirements.txt
+pip install git+https://github.com/AdminhuDev/pocketoptionapi.git
 ```
 
-## Uso Básico
+### Instalação local (para desenvolvimento):
+```bash
+git clone https://github.com/AdminhuDev/pocketoptionapi.git
+cd pocketoptionapi
+pip install -e .
+```
+
+## 🚀 Uso Rápido
 
 ```python
-import time
-from pocketoptionapi.stable_api import PocketOption
-import logging
+from pocketoptionapi import PocketOption
 
-# Configurar logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
+# Inicializar a API
+api = PocketOption(email="seu_email", password="sua_senha")
 
-# Configurar sessão
-ssid = """42["auth",{"session":"sua_sessao_aqui","isDemo":1,"uid":seu_uid_aqui,"platform":2}]"""
-demo = True  # True para conta demo, False para conta real
+# Fazer login
+api.connect()
 
-# Inicializar API
-api = PocketOption(ssid, demo)
+# Verificar saldo
+saldo = api.get_balance()
+print(f"Saldo atual: {saldo}")
 
-# Conectar
-connect = api.connect()
-print(connect)
-time.sleep(10)
-
-# Obter saldo
-balance = api.get_balance()
-print(f"Saldo atual: {balance}")
-
-# Obter dados das velas
-candles = api.get_candles("EURUSD_otc", 60)  # Velas de 1 minuto
-print("Últimas velas:", candles)
-
-# Realizar uma operação
-amount = 1.0  # Valor em dólares
-active = "EURUSD_otc"  # Ativo
-action = "call"  # "call" para compra, "put" para venda
-expiration = 60  # Tempo de expiração em segundos
-
-result, order_id = api.buy(amount, active, action, expiration)
-if result:
-    print(f"Ordem {order_id} executada com sucesso!")
-    
-    # Verificar resultado
-    profit, status = api.check_win(order_id)
-    print(f"Resultado: {status} (Lucro/Prejuízo: {profit})")
+# Fazer uma operação
+api.buy(
+    price=10,           # Valor da operação
+    asset="EURUSD",     # Ativo
+    direction="call",   # Direção (call/put)
+    duration=1          # Duração em minutos
+)
 ```
 
-## Funcionalidades Detalhadas
+## 🔧 Funcionalidades
 
-### Conexão e Autenticação
-- Conexão WebSocket em tempo real
-- Suporte a contas demo e real
-- Gerenciamento automático de reconexão
+- ✅ Login e autenticação segura
+- ✅ Operações de compra e venda
+- ✅ Consulta de saldo
+- ✅ Histórico de operações
+- ✅ Dados em tempo real
+- ✅ Suporte a múltiplos ativos
+- ✅ Gerenciamento de expiração
+- ✅ WebSocket para dados em tempo real
 
-### Trading
-- Operações de compra e venda
-- Suporte a múltiplos ativos
-- Verificação de resultados
-- Gestão de ordens em tempo real
+## 📚 Documentação Detalhada
 
-### Dados de Mercado
-- Cotações em tempo real
-- Dados históricos de velas
-- Indicadores técnicos
-- Análise de tendências
+### Classe PocketOption
 
-### Gerenciamento de Conta
-- Consulta de saldo
-- Histórico de operações
-- Status da conta
-- Gestão de risco
+#### Métodos Principais:
 
-## Contribuição
+```python
+def connect() -> bool:
+    """Conecta à PocketOption e retorna True se bem sucedido"""
 
-Contribuições são bem-vindas! Por favor, sinta-se à vontade para:
+def get_balance() -> float:
+    """Retorna o saldo atual da conta"""
 
-1. Fazer um Fork do projeto
-2. Criar uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add: nova feature'`)
+def buy(price: float, asset: str, direction: str, duration: int) -> dict:
+    """
+    Realiza uma operação de compra
+    
+    Args:
+        price: Valor da operação
+        asset: Nome do ativo (ex: "EURUSD")
+        direction: Direção ("call" ou "put")
+        duration: Duração em minutos
+    
+    Returns:
+        dict: Informações da operação
+    """
+
+def get_candles(asset: str, interval: int = 60) -> list:
+    """
+    Obtém dados históricos de candles
+    
+    Args:
+        asset: Nome do ativo
+        interval: Intervalo em segundos
+    
+    Returns:
+        list: Lista de candles
+    """
+```
+
+### Classe PocketOptionAPI (Versão Estável)
+
+Versão mais estável e robusta da API, com funcionalidades adicionais:
+
+```python
+from pocketoptionapi import PocketOptionAPI
+
+api = PocketOptionAPI(email="seu_email", password="sua_senha")
+```
+
+## ⚙️ Configuração
+
+A API utiliza as seguintes dependências principais:
+- websocket-client>=1.6.1
+- requests>=2.31.0
+- python-dateutil>=2.8.2
+- pandas>=2.1.3
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor, siga estes passos:
+
+1. Faça um Fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add: nova funcionalidade'`)
 4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abrir um Pull Request
+5. Abra um Pull Request
 
-## Licença
+## 📝 Licença
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
-## Aviso Legal
+## ⚠️ Aviso Legal
 
-Este é um projeto não oficial e não tem nenhuma afiliação com a PocketOption. Use por sua própria conta e risco. O autor não se responsabiliza por perdas financeiras ou problemas técnicos decorrentes do uso desta API. 
+Este projeto não é afiliado oficialmente à PocketOption. Use por sua conta e risco. 
