@@ -2,7 +2,7 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-AdminhuDev-blue?style=flat-square&logo=github)](https://github.com/AdminhuDev)
 [![Website](https://img.shields.io/badge/Website-Portfolio-green?style=flat-square&logo=google-chrome)](https://adminhudev.github.io)
-[![Telegram](https://img.shields.io/badge/Telegram-@Analista__Adminhu-blue?style=flat-square&logo=telegram)](https://t.me/Analista_Adminhu)
+[![Telegram](https://img.shields.io/badge/Telegram-@devAdminhu-blue?style=flat-square&logo=telegram)](https://t.me/Analista_Adminhu)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 > Uma API Python robusta e moderna para integração com a PocketOption, oferecendo uma interface limpa e eficiente para automação de operações.
@@ -149,8 +149,8 @@ Este projeto é uma implementação não oficial e não possui vínculo com a Po
 ## 📞 Suporte
 
 - 📧 Email: [adminhudev@gmail.com](mailto:adminhudev@gmail.com)
-- 💬 Telegram: [@Analista_Adminhu](https://t.me/Analista_Adminhu)
-- 🌐 Website: [adminhudev.github.io](https://adminhudev.github.io)
+- 💬 Telegram: [@devAdminhu](https://t.me/devAdminhu)
+- 🌐 Website: [adminhudev.site](https://adminhudev.github.io)
 
 ---
 
