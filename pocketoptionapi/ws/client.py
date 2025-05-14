@@ -6,7 +6,6 @@ import json
 import logging
 import ssl
 
-# Importando os módulos necessários
 import pocketoptionapi.constants as OP_code
 import pocketoptionapi.global_value as global_value
 from pocketoptionapi.constants import REGION
@@ -18,13 +17,11 @@ logger = logging.getLogger(__name__)
 timesync = TimeSync()
 sync = TimeSynchronizer()
 
-
 async def on_open():
     """Método para processar a abertura do websocket."""
     print("CONEXÃO BEM SUCEDIDA")
     logger.debug("Cliente websocket conectado.")
     global_value.websocket_is_connected = True
-
 
 async def send_ping(ws):
     while global_value.websocket_is_connected is False:
@@ -34,13 +31,11 @@ async def send_ping(ws):
         await asyncio.sleep(20)
         await ws.send('42["ps"]')
 
-
 async def process_message(message):
     try:
         data = json.loads(message)
         print(f"Mensagem recebida: {data}")
 
-        # Processa a mensagem dependendo do tipo
         if isinstance(data, dict) and 'uid' in data:
             uid = data['uid']
             print(f"UID: {uid}")
@@ -48,7 +43,6 @@ async def process_message(message):
             event_type = data[0]
             event_data = data[1]
             print(f"Tipo do evento: {event_type}, Dados do evento: {event_data}")
-            # Aqui você pode adicionar mais lógica para lidar com diferentes tipos de eventos
 
     except json.JSONDecodeError as e:
         print(f"Erro ao decodificar JSON: {e}")
@@ -57,14 +51,8 @@ async def process_message(message):
     except Exception as e:
         print(f"Erro ao processar mensagem: {e}")
 
-
 class WebsocketClient(object):
     def __init__(self, api) -> None:
-        """
-        Inicializa o cliente WebSocket.
-
-        :param api: Instância da classe PocketOptionApi
-        """
         self.updateHistoryNew = None
         self.updateStream = None
         self.history_data_ready = None
@@ -100,20 +88,21 @@ class WebsocketClient(object):
             for url in self.region.get_regions(True):
                 print(url)
                 try:
+                    headers = {
+                        "Origin": "https://pocketoption.com",
+                        "Cache-Control": "no-cache",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                    }
+                    
                     async with websockets.connect(
                             url,
                             ssl=ssl_context,
-                            additional_headers={
-                                "Origin": "https://pocketoption.com",
-                                "Cache-Control": "no-cache",
-                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-                            }
+                            extra_headers=headers
                     ) as ws:
                         self.websocket = ws
                         self.url = url
                         global_value.websocket_is_connected = True
 
-                        # Criar e executar tarefas
                         on_message_task = asyncio.create_task(self.websocket_listener(ws))
                         sender_task = asyncio.create_task(self.send_message(self.message))
                         ping_task = asyncio.create_task(send_ping(ws))
@@ -129,7 +118,7 @@ class WebsocketClient(object):
                     global_value.websocket_is_connected = False
                     await self.on_error(e)
 
-            await asyncio.sleep(1)  # Esperar antes de tentar reconectar
+            await asyncio.sleep(1)
 
         return True
 
@@ -161,7 +150,6 @@ class WebsocketClient(object):
                     dict[key1][key2][key3] = value
                     break
                 else:
-                    # Remover a menor chave
                     del dict[key1][key2][sorted(dict[key1][key2].keys(), reverse=False)[0]]
 
     async def on_message(self, message):
@@ -183,12 +171,12 @@ class WebsocketClient(object):
                 global_value.order_data = message
 
             elif self.wait_second_message and isinstance(message, list):
-                self.wait_second_message = False  # Resetar para futuras mensagens
-                self._updateClosedDeals = False  # Resetar o estado
+                self.wait_second_message = False
+                self._updateClosedDeals = False
 
             elif isinstance(message, dict) and self.successCloseOrder:
                 self.api.order_async = message
-                self.successCloseOrder = False  # Resetar para futuras mensagens
+                self.successCloseOrder = False
 
             elif self.history_data_ready and isinstance(message, dict):
                 self.history_data_ready = False
@@ -218,9 +206,8 @@ class WebsocketClient(object):
             await self.websocket.send(self.ssid)
 
         elif message.startswith('451-['):
-            json_part = message.split("-", 1)[1]  # Remover o prefixo numérico e o hífen para obter o JSON válido
+            json_part = message.split("-", 1)[1]
 
-            # Converter a parte JSON para um objeto Python
             message = json.loads(json_part)
 
             if message[0] == "successauth":
@@ -232,14 +219,13 @@ class WebsocketClient(object):
                 global_value.result = True
 
             elif message[0] == "updateClosedDeals":
-                # Estabelecemos que recebemos a primeira mensagem de interesse
                 self._updateClosedDeals = True
-                self.wait_second_message = True  # Estabelecemos que esperamos a segunda mensagem de interesse
+                self.wait_second_message = True
                 await self.websocket.send('42["changeSymbol",{"asset":"AUDNZD_otc","period":60}]')
 
             elif message[0] == "successcloseOrder":
                 self.successCloseOrder = True
-                self.wait_second_message = True  # Estabelecemos que esperamos a segunda mensagem de interesse
+                self.wait_second_message = True
 
             elif message[0] == "loadHistoryPeriod":
                 self.history_data_ready = True
@@ -249,19 +235,16 @@ class WebsocketClient(object):
 
             elif message[0] == "updateHistoryNew":
                 self.updateHistoryNew = True
-                # self.api.historyNew = None
 
         elif message.startswith("42") and "NotAuthorized" in message:
             logging.error("User not Authorized: Please Change SSID for one valid")
             global_value.ssl_Mutual_exclusion = False
             await self.websocket.close()
 
-    async def on_error(self, error):  # pylint: disable=unused-argument
+    async def on_error(self, error):
         logger.error(error)
         global_value.websocket_error_reason = str(error)
         global_value.check_websocket_if_error = True
 
-    async def on_close(self, error):  # pylint: disable=unused-argument
-        # logger.debug("Websocket connection closed.")
-        # logger.warning(f"Websocket connection closed. Reason: {error}")
+    async def on_close(self, error):
         global_value.websocket_is_connected = False
