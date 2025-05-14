@@ -1,11 +1,12 @@
+"""
+Cliente WebSocket para comunicação com a PocketOption.
+"""
 import asyncio
 from datetime import datetime, timedelta, timezone
-
 import websockets
 import json
 import logging
 import ssl
-
 import pocketoptionapi.constants as OP_code
 import pocketoptionapi.global_value as global_value
 from pocketoptionapi.constants import REGION
@@ -26,30 +27,16 @@ async def on_open():
 async def send_ping(ws):
     while global_value.websocket_is_connected is False:
         await asyncio.sleep(0.1)
-    pass
     while True:
-        await asyncio.sleep(20)
-        await ws.send('42["ps"]')
-
-async def process_message(message):
-    try:
-        data = json.loads(message)
-        print(f"Mensagem recebida: {data}")
-
-        if isinstance(data, dict) and 'uid' in data:
-            uid = data['uid']
-            print(f"UID: {uid}")
-        elif isinstance(data, list) and len(data) > 0:
-            event_type = data[0]
-            event_data = data[1]
-            print(f"Tipo do evento: {event_type}, Dados do evento: {event_data}")
-
-    except json.JSONDecodeError as e:
-        print(f"Erro ao decodificar JSON: {e}")
-    except KeyError as e:
-        print(f"Erro de chave: {e}")
-    except Exception as e:
-        print(f"Erro ao processar mensagem: {e}")
+        try:
+            await ws.send('42["ps"]')
+            await asyncio.sleep(20)
+        except websockets.exceptions.ConnectionClosed:
+            logger.warning("Connection closed during ping, attempting reconnect...")
+            break
+        except Exception as e:
+            logger.error(f"Error during ping: {e}")
+            await asyncio.sleep(5)
 
 class WebsocketClient(object):
     def __init__(self, api) -> None:
@@ -66,27 +53,27 @@ class WebsocketClient(object):
         self.loop = asyncio.get_event_loop()
         self.wait_second_message = False
         self._updateClosedDeals = False
+        self.reconnect_delay = 5  # Initial delay in seconds
+        self.max_reconnect_delay = 60  # Maximum delay in seconds
 
     async def websocket_listener(self, ws):
         try:
             async for message in ws:
                 await self.on_message(message)
+        except websockets.exceptions.ConnectionClosed:
+            logger.warning("Connection closed, attempting reconnect...")
+            global_value.websocket_is_connected = False
         except Exception as e:
-            logging.warning(f"Ocorreu um erro: {e}")
+            logger.error(f"Error in websocket listener: {e}")
+            global_value.websocket_is_connected = False
 
     async def connect(self):
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
 
-        try:
-            await self.api.close()
-        except:
-            pass
-
         while not global_value.websocket_is_connected:
             for url in self.region.get_regions(True):
-                print(url)
                 try:
                     headers = {
                         "Origin": "https://pocketoption.com",
@@ -102,21 +89,21 @@ class WebsocketClient(object):
                         self.websocket = ws
                         self.url = url
                         global_value.websocket_is_connected = True
+                        self.reconnect_delay = 5  # Reset delay on successful connection
 
-                        on_message_task = asyncio.create_task(self.websocket_listener(ws))
-                        sender_task = asyncio.create_task(self.send_message(self.message))
-                        ping_task = asyncio.create_task(send_ping(ws))
-
-                        await asyncio.gather(on_message_task, sender_task, ping_task)
-
-                except websockets.ConnectionClosed as e:
-                    global_value.websocket_is_connected = False
-                    await self.on_close(e)
-                    logger.warning("Tentando outro servidor")
+                        tasks = [
+                            self.websocket_listener(ws),
+                            self.send_message(self.message),
+                            send_ping(ws)
+                        ]
+                        
+                        await asyncio.gather(*tasks)
 
                 except Exception as e:
+                    logger.error(f"Connection error: {e}")
                     global_value.websocket_is_connected = False
-                    await self.on_error(e)
+                    await asyncio.sleep(self.reconnect_delay)
+                    self.reconnect_delay = min(self.reconnect_delay * 2, self.max_reconnect_delay)
 
             await asyncio.sleep(1)
 
@@ -131,10 +118,14 @@ class WebsocketClient(object):
         if global_value.websocket_is_connected and message is not None:
             try:
                 await self.websocket.send(message)
+            except websockets.exceptions.ConnectionClosed:
+                logger.warning("Connection closed while sending message")
+                global_value.websocket_is_connected = False
             except Exception as e:
-                logger.warning(f"Erro ao enviar mensagem: {e}")
+                logger.error(f"Error sending message: {e}")
+                global_value.websocket_is_connected = False
         elif message is not None:
-            logger.warning("WebSocket não está conectado")
+            logger.warning("WebSocket not connected")
 
     @staticmethod
     def dict_queue_add(self, dict, maxdict, key1, key2, key3, value):
@@ -156,10 +147,14 @@ class WebsocketClient(object):
         """Método para processar mensagens do websocket."""
         logger.debug(message)
 
-        if type(message) is bytes:
+        if isinstance(message, bytes):
             message2 = message.decode('utf-8')
             message = message.decode('utf-8')
-            message = json.loads(message)
+            try:
+                message = json.loads(message)
+            except json.JSONDecodeError:
+                logger.warning("Failed to decode message as JSON")
+                return
 
             if "balance" in message:
                 if "uid" in message:
@@ -193,9 +188,6 @@ class WebsocketClient(object):
                 global_value.PayoutData = message2
             return
 
-        else:
-            pass
-
         if message.startswith('0') and "sid" in message:
             await self.websocket.send("40")
 
@@ -206,35 +198,40 @@ class WebsocketClient(object):
             await self.websocket.send(self.ssid)
 
         elif message.startswith('451-['):
-            json_part = message.split("-", 1)[1]
+            try:
+                json_part = message.split("-", 1)[1]
+                message = json.loads(json_part)
 
-            message = json.loads(json_part)
+                if message[0] == "successauth":
+                    await on_open()
 
-            if message[0] == "successauth":
-                await on_open()
+                elif message[0] == "successupdateBalance":
+                    global_value.balance_updated = True
+                elif message[0] == "successopenOrder":
+                    global_value.result = True
 
-            elif message[0] == "successupdateBalance":
-                global_value.balance_updated = True
-            elif message[0] == "successopenOrder":
-                global_value.result = True
+                elif message[0] == "updateClosedDeals":
+                    self._updateClosedDeals = True
+                    self.wait_second_message = True
+                    await self.websocket.send('42["changeSymbol",{"asset":"AUDNZD_otc","period":60}]')
 
-            elif message[0] == "updateClosedDeals":
-                self._updateClosedDeals = True
-                self.wait_second_message = True
-                await self.websocket.send('42["changeSymbol",{"asset":"AUDNZD_otc","period":60}]')
+                elif message[0] == "successcloseOrder":
+                    self.successCloseOrder = True
+                    self.wait_second_message = True
 
-            elif message[0] == "successcloseOrder":
-                self.successCloseOrder = True
-                self.wait_second_message = True
+                elif message[0] == "loadHistoryPeriod":
+                    self.history_data_ready = True
 
-            elif message[0] == "loadHistoryPeriod":
-                self.history_data_ready = True
+                elif message[0] == "updateStream":
+                    self.updateStream = True
 
-            elif message[0] == "updateStream":
-                self.updateStream = True
+                elif message[0] == "updateHistoryNew":
+                    self.updateHistoryNew = True
 
-            elif message[0] == "updateHistoryNew":
-                self.updateHistoryNew = True
+            except json.JSONDecodeError:
+                logger.warning("Failed to decode JSON message")
+            except Exception as e:
+                logger.error(f"Error processing message: {e}")
 
         elif message.startswith("42") and "NotAuthorized" in message:
             logging.error("User not Authorized: Please Change SSID for one valid")
